@@ -83,23 +83,27 @@ public class StockPriceGeneratorService {
             Math.round(changePercent * 100.0) / 100.0,
             LocalDateTime.now()
         );
-        
-        // Send to Kafka
-        try {
-            kafkaTemplate.send(topicName, symbol, stockPrice)
-                .whenComplete((result, ex) -> {
-                    if (ex == null) {
-                        logger.info("Sent stock price: {}", stockPrice);
-                    } else {
-                        logger.error("Failed to send stock price: {}", stockPrice, ex);
-                    }
-                });
-        } catch (Exception e) {
-            logger.error("Error sending stock price to Kafka", e);
-        }
+
+      sendToKafka(symbol, stockPrice);
     }
-    
-    /**
+
+  private void sendToKafka(String symbol, StockPrice stockPrice) {
+    // Send to Kafka
+    try {
+        kafkaTemplate.send(topicName, symbol, stockPrice)
+            .whenComplete((result, ex) -> {
+                if (ex == null) {
+                    logger.info("Sent stock price: {}", stockPrice);
+                } else {
+                    logger.error("Failed to send stock price: {}", stockPrice, ex);
+                }
+            });
+    } catch (Exception e) {
+        logger.error("Error sending stock price to Kafka", e);
+    }
+  }
+
+  /**
      * Get current price for monitoring
      */
     public double getCurrentPrice() {

@@ -94,12 +94,56 @@ export class StockService {
   }
 
   /**
-   * Get historical data for symbol
+   * Get historical data for symbol (from in-memory storage)
+   * Fast but limited to last 1000 messages
    */
   async getHistory(symbol: string, limit: number = 100): Promise<StockPrice[]> {
     const response = await fetch(`${API_BASE_URL}/api/stock/history/${symbol}?limit=${limit}`);
     if (!response.ok) {
       throw new Error(`Failed to fetch history for ${symbol}`);
+    }
+    return response.json();
+  }
+
+  /**
+   * Get historical data directly from Kafka
+   * Slower but returns ALL messages stored in Kafka (not just last 1000)
+   * Use this to get messages that came before the client connected
+   */
+  async getKafkaHistory(symbol: string, limit: number = 500): Promise<StockPrice[]> {
+    const response = await fetch(`${API_BASE_URL}/api/stock/history/kafka/${symbol}?limit=${limit}`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch Kafka history for ${symbol}`);
+    }
+    return response.json();
+  }
+
+  /**
+   * Get ALL historical data from Kafka (all symbols)
+   */
+  async getAllKafkaHistory(limit: number = 1000): Promise<StockPrice[]> {
+    const response = await fetch(`${API_BASE_URL}/api/stock/history/kafka/all?limit=${limit}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch all Kafka history');
+    }
+    return response.json();
+  }
+
+  /**
+   * Get historical data within time range from Kafka
+   */
+  async getKafkaHistoryByTimeRange(
+    symbol: string, 
+    from: Date, 
+    to: Date
+  ): Promise<StockPrice[]> {
+    const fromISO = from.toISOString();
+    const toISO = to.toISOString();
+    const response = await fetch(
+      `${API_BASE_URL}/api/stock/history/kafka/${symbol}/range?from=${fromISO}&to=${toISO}`
+    );
+    if (!response.ok) {
+      throw new Error(`Failed to fetch Kafka history by time range for ${symbol}`);
     }
     return response.json();
   }
@@ -116,12 +160,23 @@ export class StockService {
   }
 
   /**
-   * Get health status
+   * Get health status (includes Kafka message count)
    */
   async getHealth(): Promise<HealthStatus> {
     const response = await fetch(`${API_BASE_URL}/api/stock/health`);
     if (!response.ok) {
       throw new Error('Failed to fetch health status');
+    }
+    return response.json();
+  }
+
+  /**
+   * Get Kafka-specific statistics
+   */
+  async getKafkaStats(): Promise<{ totalMessages: number; topic: string; timestamp: string }> {
+    const response = await fetch(`${API_BASE_URL}/api/stock/stats/kafka`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch Kafka statistics');
     }
     return response.json();
   }
